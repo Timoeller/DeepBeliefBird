@@ -1,3 +1,11 @@
+'''
+Module to handle Birdsong wav files: 
+- produce labels according to excel file
+- create train and test sets for cross validation 
+
+author: Timo Moeller
+'''
+
 import numpy as np
 import pylab as pl
 import os
@@ -64,40 +72,37 @@ def createLabelArray(xlsfile,fs=44100,windowL=1024,hopF=2):
     
     return ALL_labels
 
-def concatSongs(mypath):
+def readSongs(mypath):
     '''
-    concatenates all .wav files in mypath with same samplerate
+    reads all .wav files in mypath with same samplerate
     file should look like '7 276.wav' || sorting done on first number, second number ident bird
     args:
         path to look for .wav files. no traversing of dir
     returns: 
-            wholesong: 1D numpy array, 
-            fs: sample rate 
+            wholesong: list of songs, 
+            fs: sample rate of all songs 
+            onlyfiles: strings of files, same index as wholesong
     '''
-    onlyfiles = [ f for f in os.listdir(mypath) if os.path.isfile(os.path.join(mypath,f)) and os.path.join(mypath,f).endswith('.wav')]
-    records = np.asarray([int(x[:x.find(' ')]) for x in onlyfiles])
-    ind= np.argsort(records)
-
+    onlyfiles = [ f for f in os.listdir(mypath) if os.path.isfile(os.path.join(mypath,f)) and f.endswith('.wav')]
+    recordnum = np.asarray([int(x[:x.find(' ')]) for x in onlyfiles])
+    ind= np.argsort(recordnum)
+    onlyfiles = [onlyfiles[i] for i in ind] #files sorted after first number in name
     wholesong=[]
-    for i,index in enumerate(ind):
-        myfile=onlyfiles[index]
-        if myfile.endswith('.wav'):
-            print mypath+myfile
-            try:
-                [fs, song]=wavfile.read(mypath+myfile)
-            except Exception, e:
-                print myfile + ' is not working properly' #could insert a break, but apperently too many files are corrupted (without causing troubles... jet)
-
-            if i == 0:
-                FSall = fs
-
-            elif fs != FSall:
-                print 'mismatched sampling rates in folder %s' %mypath
-                break
-            wholesong.append(song)
+    for i,myfile in enumerate(onlyfiles):
+        try:
+            [fs, song]=wavfile.read(mypath+myfile)
+        except Exception, e:
+            #print myfile + ' is not working properly' #could insert a break, but apparently too many files are corrupted (without causing troubles... jet)
+            muh=1
+        if i == 0:
+            FSall = fs
+        elif fs != FSall: #if sample rate mismatched from other files, don't add to list and remove from onlyfiles
+            print 'mismatched sampling rates in folder %s' %mypath
+            del onlyfiles[i] 
+            break
+        wholesong.append(song)
             
-    return wholesong,FSall    
-    #return np.concatenate(wholesong),FSall
+    return wholesong,FSall,onlyfiles
 
 
 if __name__ == '__main__':
@@ -115,8 +120,9 @@ if __name__ == '__main__':
     #===========================================================================
     folder ='Motifs/38/'
 
-    song,fs=concatSongs(folder)
+    song,fs,filenames=readSongs(folder)
     print len(song)
+    print filenames
             
             
     
