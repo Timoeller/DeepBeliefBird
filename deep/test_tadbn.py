@@ -1,15 +1,20 @@
 import pylab as plt
 from scipy.io import wavfile
 
+import sys
+sys.path.insert(0, '//home/timom/git/deep')
 from models.tadbn import TADBN
-import numpy
+
 import numpy as np
 import theano
 import cPickle
-import sys
+
 import reconstruct_generated as recon
+
 sys.path.insert(0, '//home/timom/git/DeepBeliefBird/SongFeatures')
-import preprocessing as prep
+import preprocessing as pp
+
+
 
 #===============================================================================
 # inputfile= 'test1.wav'
@@ -19,7 +24,7 @@ import preprocessing as prep
 # else:
 #    song = songwhole[5*fs:15*fs]
 #===============================================================================
-inputfile= '38_concat.pkl'
+inputfile= 'input/38_concat.pkl'
 pklfile=open(inputfile,'rb')
 temp=cPickle.load(pklfile)
 song=temp[0]
@@ -27,17 +32,17 @@ fs=temp[1]
 
 
 savednamed= '1_' + inputfile[:-4]
-test_data,invD,mu,sigma= prep.main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30)
+test_data,invD,mu,sigma= pp.main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30)
 
 print 'time slizes: %i || input dimensions: %i || window size:%i' %(test_data.shape[0],test_data.shape[1],(invD.shape[0]-1)*2)
 
 
-batchdata = numpy.asarray(test_data, dtype=theano.config.floatX)
+batchdata = np.asarray(test_data, dtype=theano.config.floatX)
 
 delay = 50
 seqlen = [ test_data.shape[0] ]  #for multiple files after one another: takes as first input the signal at later time, so delayed training corresponds
 hidden_layers_sizes = [100]
-numpy_rng = numpy.random.RandomState(123)
+numpy_rng = np.random.RandomState(123)
 n_dim = [test_data.shape[1]]
 
 dbn_tadbn = TADBN(numpy_rng=numpy_rng, n_ins=[n_dim],
