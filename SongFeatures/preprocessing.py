@@ -168,30 +168,43 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
     
         pl.figure()
         pl.subplot(3,1,1)
-        pl.imshow(newspec.T,origin='lower',aspect='auto')
+        pl.plot(np.arange(0,filteredsong.shape[0]*1.0/fs,1.0/fs),filteredsong)
+        pl.title('Highpass filtered Song',fontsize=30)
+        #pl.xlabel('time [s]')
+        pl.xticks([])
+        pl.yticks([])
+        
         pl.subplot(3,1,2)
         pl.imshow((spectogram).T,origin='lower',aspect='auto')
-        pl.colorbar()
+        pl.title('Spectogram',fontsize=30)
+        pl.ylabel('nfft bin')
+        pl.xticks([])
+        
         pl.subplot(3,1,3)
-        pl.colorbar()
-        pl.imshow((oldspec).T,origin='lower',aspect='auto')
+        pl.imshow(newspec.T,origin='lower',aspect='auto')
+        pl.title('Cepstrum',fontsize=30)
+        #pl.xlabel('frame number')
+        pl.ylabel('Coefficient')
+        pl.xticks([])
+        
+        
         pl.show()
     
     return newspec,invD,mu,sigma
     
 if __name__ == '__main__':
+    inputfile= 'test1.wav'
+    [fs, songwhole]=wavfile.read(inputfile)
+    if len(songwhole.shape)==2:
+        song=np.mean(songwhole[:],axis=1)
+    else:
+        song = songwhole[5*fs:15*fs]
     #===========================================================================
-    # inputfile= 'test1.wav'
-    # [fs, songwhole]=wavfile.read(inputfile)
-    # if len(songwhole.shape)==2:
-    #    song=np.mean(songwhole[:],axis=1)
-    # else:
-    #    song = songwhole[5*fs:15*fs]
+    # pklfile=open('38_concat.pkl','rb')
+    # temp=cPickle.load(pklfile)
+    # song=temp[0]
+    # fs=temp[1]
     #===========================================================================
-    pklfile=open('38_concat.pkl','rb')
-    temp=cPickle.load(pklfile)
-    song=temp[0]
-    fs=temp[1]
     test_data,invD,mu,sigma= main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting=True)
     
 

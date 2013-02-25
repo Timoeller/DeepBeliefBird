@@ -23,7 +23,7 @@ def convertSyl2Num(syllables):
         s[i]=converter[syllables[i][0]] # taking just first letter in case something like A1 A2 exists...
     return s
 
-def createLabelArray(path,PEGGY_DRIFT,fs=44100,windowL=1024,hopF=2):
+def createLabelArray(path,PEGGY_DRIFT=0.01,fs=44100,windowL=1024,hopF=2):
     ''' method that takes the xls file and creates for each song a array with labels
     in:
       path: path containing excel file: column t1 = start of Syllable | t2 = end of Syl
@@ -108,7 +108,8 @@ def readSongs(mypath):
         try:
             [fs, song]=wavfile.read(mypath+myfile)
         except Exception, e:
-            print myfile + ' is not working properly'
+            print e + myfile
+            #print myfile + ' is not working properly'
             this=False
         if not(fsAssigned) and this: #tricky if first file is corrupted
             FSall = fs
@@ -119,21 +120,21 @@ def readSongs(mypath):
             fsAssigned=True
             filenames.append(myfile)
             songs.append(song)
-    seqlen = [len(x) for x in songs]
+    #seqlen = [len(x) for x in songs]
             
-    return songs,FSall,filenames,seqlen    
+    return songs,FSall,filenames    
 
 if __name__ == '__main__':
-    path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
+    path= '//home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
     plotting=True
     os.chdir(path)
     for files in os.listdir("."):
         if files.endswith(".xls"):
             xlsfile=files 
             
-    nfft=256*8
+    nfft=512
     songs,fs,filenames=readSongs(path)        
-    labels= createLabelArray(path,fs=fs,windowL=nfft,hopF=2)  
+    labels= createLabelArray(path,PEGGY_DRIFT=0.01,fs=fs,windowL=nfft,hopF=2)  
     print filenames      
     print len(songs)
     songnumber = 4
