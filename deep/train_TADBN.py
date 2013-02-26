@@ -12,13 +12,14 @@ import cPickle
 import reconstruct_generated as recon
 
 sys.path.insert(0, '//home/timom/git/DeepBeliefBird/')
+sys.path.append('..')
 import SongFeatures.preprocessing as pp
 import SongFeatures.birdsongUtil as bsu
 
 ''' 
 paramter specs
 '''
-inputpath= '//home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
+inputpath= '../SongFeatures/Motifs/1189/'
 nfft=512
 delay = 25
 hidden_layers_sizes = [50]
@@ -58,12 +59,14 @@ dbn_tadbn.pretrain(batchdata, plot_interval=5, static_epochs=80,
 output = open('trained_models/' + savednamed + '.pkl', 'wb')
 cPickle.dump(dbn_tadbn, output)
 output.close()
-
-# sanity check
-generated_series = dbn_tadbn.generate(batchdata, n_samples=300)[0,:,:]
-output = open('output/gen_' + savednamed + '.pkl', 'wb')
-cPickle.dump([generated_series,test_data,delay,hidden_layers_sizes,invD,mu,sigma], output)
-output.close()
-recon.main(generated_series,test_data,invD,mu,sigma,savednamed,delay,hidden_layers_sizes,plotting=True)
+#===============================================================================
+# 
+# # sanity check
+# generated_series = dbn_tadbn.generate(batchdata, n_samples=300)[0,:,:]
+# output = open('output/gen_' + savednamed + '.pkl', 'wb')
+# cPickle.dump([generated_series,test_data,delay,hidden_layers_sizes,invD,mu,sigma], output)
+# output.close()
+# recon.main(generated_series,test_data,invD,mu,sigma,savednamed,delay,hidden_layers_sizes,plotting=True)
+#===============================================================================
 
 
