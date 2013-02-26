@@ -137,52 +137,50 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
     sigma=np.std(newspec,axis=0)
     newspec=(newspec-mu)/sigma
     
-    #===========================================================================
-    # # we want to filter frequencies from 250Hz to 11kHz
-    # lowfreq=0
-    # highfreq=11000
-    # 
-    # nlinfilt=20
-    # linsc=(highfreq*1.0-lowfreq)/(nlinfilt-1)
-    # logsc=1.
-    # nlogfilt=0
-    # filters= trfbank(fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt)
-    # print filters[1]
-    # triF=filters[0][:,:nfft/2+1].T
-    # triF=triF/np.sum(triF[:,0])
-    # print np.mean(triF)
-    # INVtriF=np.zeros((triF.shape[1],triF.shape[0]))
-    # for i in range(triF.shape[0]):
-    #   for j in range(triF.shape[1]):
-    #       if triF[i,j] > 1e-2:
-    #           INVtriF[j,i]= 1/triF[i,j]
-    #       
-    # #INVtriF=np.linalg.pinv(triF)
-    # #INVtrifilt[np.isnan(INVtrifilt)]=0
-    # newspec= np.dot(spectogram,triF)
-    # oldspec= np.dot(newspec,INVtriF)
-    #===========================================================================
+    # we want to filter frequencies for zebra finch from 250Hz to 11kHz
+    lowfreq=250
+    highfreq=11000
+    
+    nlinfilt=30
+    linsc=(highfreq*1.0-lowfreq)/(nlinfilt-1)
+    logsc=1.
+    nlogfilt=0
+    filters= trfbank(fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt)
+    triF=filters[0][:,:nfft/2+1].T
+    triF=triF/np.sum(triF[:,0])
+
+    PINVtriF=np.linalg.pinv(triF)
+    #INVtrifilt[np.isnan(INVtrifilt)]=0
+    trispec= np.dot(spectogram,triF)
+    oldtrispec= np.dot(trispec,PINVtriF)
     
     if plotting:
         oldspec = np.dot(invD,((newspec*sigma)+mu).T).T
     
         pl.figure()
-        pl.subplot(3,1,1)
+        pl.subplot(4,1,1)
         pl.plot(np.arange(0,filteredsong.shape[0]*1.0/fs,1.0/fs),filteredsong)
         pl.title('Highpass filtered Song',fontsize=30)
         #pl.xlabel('time [s]')
         pl.xticks([])
         pl.yticks([])
         
-        pl.subplot(3,1,2)
+        pl.subplot(4,1,2)
         pl.imshow((spectogram).T,origin='lower',aspect='auto')
         pl.title('Spectogram',fontsize=30)
         pl.ylabel('nfft bin')
         pl.xticks([])
         
-        pl.subplot(3,1,3)
-        pl.imshow(newspec.T,origin='lower',aspect='auto')
-        pl.title('Cepstrum',fontsize=30)
+        pl.subplot(4,1,3)
+        pl.imshow(oldspec.T,origin='lower',aspect='auto')
+        pl.title('Cepstrum inverse',fontsize=30)
+        #pl.xlabel('frame number')
+        pl.ylabel('Coefficient')
+        pl.xticks([])
+        
+        pl.subplot(4,1,4)
+        pl.imshow(trispec.T,origin='lower',aspect='auto')
+        pl.title('filterbank inverse',fontsize=30)
         #pl.xlabel('frame number')
         pl.ylabel('Coefficient')
         pl.xticks([])

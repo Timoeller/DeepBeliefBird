@@ -124,7 +124,7 @@ def TARBM_logit(path,crossValidation=5):
     inputfile= '//home/timom/git/DeepBeliefBird/deep/trained_models/1_38_concat.pkl'
     pklfile=open(inputfile,'rb')
     dbn_tadbn=cPickle.load(pklfile)
-    nfft=256
+    nfft=512
     hopF=2
     numCoeffs=30
     songs,fs,filenames,seqlen=bsu.readSongs(path)        
@@ -160,7 +160,7 @@ def doLogit(data,targets):
     logit = linear_model.LogisticRegression()
     
     num_samples = data.shape[0]
-    num_training=num_samples-200#int(num_samples/1.5)
+    num_training=num_samples-250#int(num_samples/1.5)
     training=data[0:num_training,:]
     trainTargets=targets[0:num_training]
     
@@ -169,8 +169,10 @@ def doLogit(data,targets):
     logit.fit(training,trainTargets)
     prediction=logit.predict(data)
     
+    
+    print 'training correct = %.3f' %(np.sum(prediction[:num_training] == targets[:num_training])/(num_training*1.0))
     pl.figure()
-    for i in range(num_training,len(targets)):
+    for i in range(num_training-200,len(targets)):
         if i == num_training:
             pl.plot([i,i],[-1,np.max(targets)+1],label='unseen ->')
         
@@ -193,18 +195,17 @@ if __name__ == '__main__':
     #TARBM_logit(path,crossValidation=5)
     #normal_logit(path,batchsize=3,crossValidation=5)
     tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/512_25_1189.pkl'
-    data,targets=createData(path,tadbn_file =tadbn_file ,method='normal',nfft=512,batchsize=3)
-    doLogit(data,targets)
-    #===========================================================================
-    # print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
-    # print targets.shape
-    # print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-    # logit = linear_model.LogisticRegression()
-    # scores = cross_validation.cross_val_score(logit, data, targets, cv=5)
-    # print scores
-    # print 'mean score: %.3f' %np.mean(scores)
-    #===========================================================================
+    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=512,hopF=2,batchsize=3)
     
+    print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
+    print targets.shape
+    print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
+    logit = linear_model.LogisticRegression()
+    kf = cross_validation.KFold(len(targets), k=5, shuffle=False)
+    scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
+    print scores
+    print 'mean score: %.3f' %np.mean(scores)
+    doLogit(data,targets)
     #===========================================================================
     # pl.figure()
     # pl.imshow(data.T,origin='lower')
