@@ -31,7 +31,7 @@ for nfft in nfft_list:
         for hidden_layers_sizes in hidden_layers_sizes_list:
             for sparse in sparse_list:
                 
-                savedname= '%i_%i_%i_%i_1189' %(nfft,delay,hidden_layers_sizes_list[0],sparse) 
+                savedname= '%i_%i_%i_%.1f_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
                 print savedname
                 songs,fs,filenames=bsu.readSongs(inputpath)  
                 
