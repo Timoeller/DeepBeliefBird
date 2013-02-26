@@ -195,13 +195,32 @@ if __name__ == '__main__':
     #TARBM_logit(path,crossValidation=5)
     #normal_logit(path,batchsize=3,crossValidation=5)
     tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/512_25_1189.pkl'
-    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=512,hopF=2,batchsize=3)
+    data,targets=createData(path,tadbn_file =tadbn_file ,method='normal',nfft=512,hopF=2,batchsize=3)
     
     print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
     print targets.shape
     print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-    logit = linear_model.LogisticRegression()
-    kf = cross_validation.KFold(len(targets), k=5, shuffle=False)
+    logit = linear_model.LogisticRegression(penalty='l1', C=0.01)
+    #lg = linear_model.LogisticRegression(penalty='l1', C=0.01)    
+    #lg.fit(data, targets)
+    #print lg.coef_.shape
+    #pl.hist(lg.coef_)
+    #pl.show()
+    
+    kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
+    pred = np.zeros_like(targets)
+    coefs = []
+    for train, test in kf:
+        clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
+        clf.fit(data[train], targets[train])
+        coefs.append(clf.coef_)
+        pred[test] = clf.predict(data[test])
+    coefs = np.array(coefs)
+    print coefs.shape
+        
+        
+    
+    
     scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
     print scores
     print 'mean score: %.3f' %np.mean(scores)
