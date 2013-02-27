@@ -20,9 +20,9 @@ import SongFeatures.birdsongUtil as bsu
 paramter specs
 '''
 inputpath= '../SongFeatures/Motifs/1189/'
-nfft_list=[256,512,1024]
-delay_list = [10,25,50]
-hidden_layers_sizes_list = [[10],[50],[200]]
+nfft_list=[1024,512]
+delay_list = [10,25,40]
+hidden_layers_sizes_list =[[10],[100],[200]]
 sparse_list=[0.0,0.5,0.1]
 
 
@@ -31,13 +31,13 @@ for nfft in nfft_list:
         for hidden_layers_sizes in hidden_layers_sizes_list:
             for sparse in sparse_list:
                 
-                savedname= '%i_%i_%i_%.1f_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
+                savedname= '%i_%i_%i_%.1f_FB_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
                 print savedname
                 songs,fs,filenames=bsu.readSongs(inputpath)  
                 
                 seqlen=[]
                 for i,song in enumerate(songs):
-                    cepstrum,invD,mu,sigma= pp.main(song,fs,hpFreq=250,nfft=nfft,hopfactor=2,M=False,numCoeffs= 30)
+                    cepstrum,invD,mu,sigma,triF= pp.main(song,fs,hpFreq=250,nfft=nfft,hopfactor=2,filterbank=True,numCoeffs=12,DCT=True)
                     seqlen.append(cepstrum.shape[0])
                     if i == 0:
                         test_data=cepstrum

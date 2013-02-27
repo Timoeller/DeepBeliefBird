@@ -99,7 +99,7 @@ def trfbank(fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt):
 
     return fbank, freqs
 
-def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting=False):
+def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30,plotting=False,DCT=True):
     '''
     function that performs preprocessing on audiodata (.wav) in song by
     1. highpass filtering with butterworth filter (noise reduction)
@@ -124,37 +124,41 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
     spectogram[spectogram < 1e-100]=1e-100 #log 0 avoid
     spectogram=np.log(spectogram)
     #filterbank
-    if not M:
-        # TODO: create filterbank appropiate for species and apply to spectogram. 
-        muh=1
+    if filterbank:
+        # we want to filter frequencies for zebra finch from 250Hz to 11kHz
+        lowfreq=250
+        highfreq=11000
+        
+        nlinfilt=30
+        linsc=(highfreq*1.0-lowfreq)/(nlinfilt-1)
+        logsc=1.
+        nlogfilt=0
+        filters= trfbank(fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt)
+        triF=filters[0][:,:nfft/2+1].T
+        triF=triF/np.sum(triF[:,0])
+        
+        spectogram=np.dot(spectogram,triF)
+        
     #DCT
-    D = dctmtx(spectogram.shape[1])[0:numCoeffs,:]
-    invD = np.linalg.inv(dctmtx(spectogram.shape[1]))[:,0:numCoeffs]
-    newspec = np.dot(D,spectogram.T).T
+    if DCT:
+        D = dctmtx(spectogram.shape[1])[0:numCoeffs,:]
+        invD = np.linalg.inv(dctmtx(spectogram.shape[1]))[:,0:numCoeffs]
+        newspec = np.dot(D,spectogram.T).T
     
     #normalization of each channel through time
     mu = np.mean(newspec,axis=0)
     sigma=np.std(newspec,axis=0)
     newspec=(newspec-mu)/sigma
     
-    # we want to filter frequencies for zebra finch from 250Hz to 11kHz
-    lowfreq=250
-    highfreq=11000
     
-    nlinfilt=30
-    linsc=(highfreq*1.0-lowfreq)/(nlinfilt-1)
-    logsc=1.
-    nlogfilt=0
-    filters= trfbank(fs, nfft, lowfreq, linsc, logsc, nlinfilt, nlogfilt)
-    triF=filters[0][:,:nfft/2+1].T
-    triF=triF/np.sum(triF[:,0])
 
-    PINVtriF=np.linalg.pinv(triF)
-    #INVtrifilt[np.isnan(INVtrifilt)]=0
-    trispec= np.dot(spectogram,triF)
-    oldtrispec= np.dot(trispec,PINVtriF)
+    
     
     if plotting:
+        PINVtriF=np.linalg.pinv(triF)
+        #INVtrifilt[np.isnan(INVtrifilt)]=0
+        #trispec= np.dot(spectogram,triF)
+        oldtrispec= np.dot(spectogram,PINVtriF)
         oldspec = np.dot(invD,((newspec*sigma)+mu).T).T
     
         pl.figure()
@@ -167,7 +171,7 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
         
         pl.subplot(4,1,2)
         pl.imshow((spectogram).T,origin='lower',aspect='auto')
-        pl.title('Spectogram',fontsize=30)
+        pl.title('filtered Spectogram',fontsize=30)
         pl.ylabel('nfft bin')
         pl.xticks([])
         
@@ -179,8 +183,8 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
         pl.xticks([])
         
         pl.subplot(4,1,4)
-        pl.imshow(trispec.T,origin='lower',aspect='auto')
-        pl.title('filterbank inverse',fontsize=30)
+        pl.imshow(newspec.T,origin='lower',aspect='auto')
+        pl.title('cepstrum',fontsize=30)
         #pl.xlabel('frame number')
         pl.ylabel('Coefficient')
         pl.xticks([])
@@ -188,7 +192,10 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting
         
         pl.show()
     
-    return newspec,invD,mu,sigma
+    if filterbank:
+        return newspec,invD,mu,sigma,triF
+    else:
+        return newspec,invD,mu,sigma
     
 if __name__ == '__main__':
     inputfile= 'test1.wav'
@@ -203,7 +210,7 @@ if __name__ == '__main__':
     # song=temp[0]
     # fs=temp[1]
     #===========================================================================
-    test_data,invD,mu,sigma= main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,M=False,numCoeffs= 30,plotting=True)
+    test_data,invD,mu,sigma= main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=True,numCoeffs= 12,plotting=True,DCT=True)
     
 
 

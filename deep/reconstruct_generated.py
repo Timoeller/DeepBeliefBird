@@ -16,7 +16,7 @@ def unnormalize(s,mu,sigma):
     '''
     return (s*sigma)+mu
 
-def main(gen_series,test_data,invD,mu,sigma,savednamed,delay,hidden_sizes,plotting=True):
+def main(gen_series,test_data,invD,mu,sigma,savednamed,delay,hidden_sizes,plotting=True,M=None):
     '''
     undo preprocessing up until spectogram, generate m-file to generate WAV with CATbox V0.1
     in:

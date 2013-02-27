@@ -33,11 +33,10 @@ def createLabelArray(path,PEGGY_DRIFT=0.01,fs=44100,windowL=1024,hopF=2):
     out:
         dict of key:songname and value: labeled array
     '''
-    os.chdir(path)
-    for files in os.listdir("."):
-        if files.endswith(".xls"):
-            xlsfile=files
-            break
+    xlsfile = [ f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.xls')]
+    if len(xlsfile) > 1:
+        print 'more than 1 excel file in dir: ' + path
+    xlsfile=path+xlsfile[0]
     frame_shift=windowL*1.0/hopF
     ALL_labels={'windowL':windowL,'hopF':hopF}
 
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     print len(songs)
     songnumber = 4
     print filenames[songnumber][:-4]
-    newspec,invD,mu,sigma= pp.main(songs[songnumber],fs,hpFreq=250,nfft=nfft,hopfactor=2,M=False,numCoeffs= 30,plotting=False)
+    newspec,invD,mu,sigma= pp.main(songs[songnumber],fs,hpFreq=250,nfft=nfft,hopfactor=2,filterbank=False,numCoeffs= 30,plotting=False)
     print newspec.shape
     
     if plotting:

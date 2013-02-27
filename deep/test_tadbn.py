@@ -29,8 +29,8 @@ inputpath= '//home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189'
 
 songs,fs,filenames=bsu.readSongs(inputpath)  
 
-savednamed= '512_30_1189_concat' 
-test_data,invD,mu,sigma= pp.main(songs,fs,hpFreq=250,nfft=512,hopfactor=2,M=False,numCoeffs= 30)
+savednamed= '512_12_1189_concat' 
+test_data,invD,mu,sigma,triF= pp.main(songs,fs,hpFreq=250,nfft=512,hopfactor=2,filterbank=True,numCoeffs= 12,DCT=True)
 
 print 'time slizes: %i || input dimensions: %i || window size:%i' %(test_data.shape[0],test_data.shape[1],(invD.shape[0]-1)*2)
 
@@ -76,4 +76,4 @@ recon.main(generated_series,test_data,invD,mu,sigma,savednamed,delay,hidden_laye
 # plt.plot(generated_series[0])
 # plt.show()
 #===============================================================================
-plt.show()
+pl.show()
