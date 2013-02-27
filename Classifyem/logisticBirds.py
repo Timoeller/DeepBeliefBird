@@ -18,6 +18,7 @@ import deep.reconstruct_generated as rg
 from sklearn import linear_model 
 from sklearn import cross_validation
 import theano
+import os
 
 PEGGY_DRIFT=0.01 # in s
 
@@ -45,11 +46,14 @@ def createData(path,nfft=256,hopF=2,numCoeffs=30,batchsize=1,batchshift=1,method
         
         if method == 'tadbn' or method == 'tarbm':    
             if not(tadbn_file):
-                tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/512_25_1189.pkl'
+                tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/old/512_25_1189.pkl'
+            if len(tadbn_file) < 25:
+                tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/' + tadbn_file
             pklfile=open(tadbn_file,'rb')
             dbn_tadbn=cPickle.load(pklfile)
             #create zero array of size delay to put in front of data and cast into theano array 
             preCepstrum=np.zeros((dbn_tadbn.delay,numCoeffs))
+            theano.config.floatX='float32'
             cepstrum=np.asarray(np.vstack((preCepstrum,cepstrum)), dtype=theano.config.floatX)
             cepstrum= dbn_tadbn.propup(cepstrum)[0,:,:]#1st Dim: output of hidden before (0) and after (1) sigmoid activation, my xp: 0 works better
             
@@ -188,19 +192,58 @@ def doLogit(data,targets):
     pl.title('Logistic Regression')
     pl.show()
         
+def loopThroughTADBN(TADBNpath):
+    batchsize=3
+    files = [ f for f in os.listdir(TADBNpath) if os.path.isfile(os.path.join(TADBNpath,f)) and f.endswith('.pkl')]
+    allscores = {}
+    for i,TADBNfile in enumerate(files):
+        #get parameters from filename
+        temp=TADBNfile.split('_',5)
+        nfft=int(temp[0])
+        delay=int(temp[1])
+        hidden_size=int(temp[2])
+        sparsity=float(temp[3])
+        birdnum=int(temp[4].split('.',1)[0])
+        songpath= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/' + str(birdnum) + '/'
+        
+        #create DAta
+        data,targets = createData(songpath,nfft=nfft,batchsize=batchsize,method='tadbn',tadbn_file=TADBNfile)
+        logit = linear_model.LogisticRegression(penalty='l1', C=1)
+        kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
+        scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
+        print i
+        print scores
+        print 'mean score: %.3f' %np.mean(scores)
+        allscores[TADBNfile[0:-4]] = [scores, np.mean(scores)]
+    
+    allscores=sorted(allscores.items(), key=lambda t: t[1][1])
+    output = open('allscores_batch3.pkl', 'wb')
+    cPickle.dump(allscores, output)
+    output.close()
+    print allscores
 
     
+    
+    
 if __name__ == '__main__':
+    TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models'
+    #loopThroughTADBN(TADBNpath)
+    
+    
+    pkl = open('allscores_batch1.pkl', 'rb')
+    allscores= cPickle.load(pkl)
+    pkl.close()
+    print sorted(allscores.items(), key=lambda t: t[1][1])
     path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
     #TARBM_logit(path,crossValidation=5)
     #normal_logit(path,batchsize=3,crossValidation=5)
-    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/512_25_1189.pkl'
-    data,targets=createData(path,tadbn_file =tadbn_file ,method='normal',nfft=512,hopF=2,batchsize=3)
+    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_200_0.0_FB_1189.pkl'
+    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=3)
     
     print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
     print targets.shape
     print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-    logit = linear_model.LogisticRegression(penalty='l1', C=0.01)
+    logit = linear_model.LogisticRegression(penalty='l1', C=1)
     #lg = linear_model.LogisticRegression(penalty='l1', C=0.01)    
     #lg.fit(data, targets)
     #print lg.coef_.shape
@@ -208,23 +251,28 @@ if __name__ == '__main__':
     #pl.show()
     
     kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
-    pred = np.zeros_like(targets)
-    coefs = []
-    for train, test in kf:
-        clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
-        clf.fit(data[train], targets[train])
-        coefs.append(clf.coef_)
-        pred[test] = clf.predict(data[test])
-    coefs = np.array(coefs)
-    print coefs.shape
-        
-        
+    
+    #===========================================================================
+    # pred = np.zeros_like(targets)
+    # coefs = []
+    # for train, test in kf:
+    #    clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
+    #    clf.fit(data[train], targets[train])
+    #    coefs.append(clf.coef_)
+    #    pred[test] = clf.predict(data[test])
+    # coefs = np.array(coefs)
+    # print coefs.shape
+    #===========================================================================
+       
+       
     
     
     scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
     print scores
     print 'mean score: %.3f' %np.mean(scores)
     doLogit(data,targets)
+    
+    
     #===========================================================================
     # pl.figure()
     # pl.imshow(data.T,origin='lower')
