@@ -20,10 +20,10 @@ import SongFeatures.birdsongUtil as bsu
 paramter specs
 '''
 inputpath= '../SongFeatures/Motifs/1189/'
-nfft_list=[1024,512]
-delay_list = [10,25,40]
-hidden_layers_sizes_list =[[10],[100],[200]]
-sparse_list=[0.0,0.5,0.1]
+nfft_list=[1024]
+delay_list = [25,40]
+hidden_layers_sizes_list =[[200],[300]]
+sparse_list=[0.01,0.05]
 
 
 for nfft in nfft_list:
