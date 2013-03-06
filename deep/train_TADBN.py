@@ -20,10 +20,10 @@ import SongFeatures.birdsongUtil as bsu
 paramter specs
 '''
 inputpath= '../SongFeatures/Motifs/1189/'
-nfft_list=[1024]
-delay_list = [25,40]
-hidden_layers_sizes_list =[[200],[300]]
-sparse_list=[0.01,0.05]
+nfft_list=[512]
+delay_list = [25]
+hidden_layers_sizes_list =[[500]]
+sparse_list=[0.01,0.001]
 
 
 for nfft in nfft_list:
@@ -31,7 +31,7 @@ for nfft in nfft_list:
         for hidden_layers_sizes in hidden_layers_sizes_list:
             for sparse in sparse_list:
                 
-                savedname= '%i_%i_%i_%.1f_FB_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
+                savedname= '%i_%i_%i_%.3f_FB_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
                 print savedname
                 songs,fs,filenames=bsu.readSongs(inputpath)  
                 
