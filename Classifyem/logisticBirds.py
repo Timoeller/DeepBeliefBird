@@ -22,7 +22,7 @@ import os
 
 PEGGY_DRIFT=0.01 # in s
 
-def createData(path,nfft=256,hopF=2,numCoeffs=30,batchsize=1,batchshift=1,method='normal',tadbn_file=None):
+def createData(path,nfft=256,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,method='normal',tadbn_file=None,filterbank=True):
     '''
     method to read wav files and labels from path to generate data for classification
     in: 
@@ -40,14 +40,14 @@ def createData(path,nfft=256,hopF=2,numCoeffs=30,batchsize=1,batchshift=1,method
     #loop through all files
     for i,filename in enumerate(filenames):
         #getting cepstrum and labels (labels <= cepstrum)
-        cepstrum,invD,mu,sigma= pp.main(songs[i],fs,hpFreq=250,nfft=nfft,hopfactor=hopF,M=False,numCoeffs= numCoeffs) 
+        cepstrum,invD,mu,sigma,triF= pp.main(songs[i],fs,hpFreq=250,nfft=nfft,hopfactor=hopF,filterbank=filterbank,numCoeffs= numCoeffs) 
         cur_labels= np.asarray(labels[filename[:-4]])
         
         
         if method == 'tadbn' or method == 'tarbm':    
             if not(tadbn_file):
                 tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/old/512_25_1189.pkl'
-            if len(tadbn_file) < 25:
+            if len(tadbn_file) < 35:
                 tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/' + tadbn_file
             pklfile=open(tadbn_file,'rb')
             dbn_tadbn=cPickle.load(pklfile)
@@ -55,7 +55,7 @@ def createData(path,nfft=256,hopF=2,numCoeffs=30,batchsize=1,batchshift=1,method
             preCepstrum=np.zeros((dbn_tadbn.delay,numCoeffs))
             theano.config.floatX='float32'
             cepstrum=np.asarray(np.vstack((preCepstrum,cepstrum)), dtype=theano.config.floatX)
-            cepstrum= dbn_tadbn.propup(cepstrum)[0,:,:]#1st Dim: output of hidden before (0) and after (1) sigmoid activation, my xp: 0 works better
+            cepstrum= dbn_tadbn.propup(cepstrum)[1,:,:]#1st Dim: output of hidden before (0) and after (1) sigmoid activation
             
             
         #getting batches, indexing only from 0 to len(labels) 
@@ -78,93 +78,11 @@ def createData(path,nfft=256,hopF=2,numCoeffs=30,batchsize=1,batchshift=1,method
 
     return data,targets
     
-def normal_logit(path,batchsize=1,crossValidation=5):
-    nfft=256*4
-    hopF=2
-    numCoeffs=30
-    
-    songs,fs,filenames,seqlen=bsu.readSongs(path)        
-    labels= bsu.createLabelArray(path,PEGGY_DRIFT,fs=fs,windowL=nfft,hopF=hopF)      
-    
-    for i,filename in enumerate(filenames):
-        #getting cepstrum and labels (labels mostly shorter than cepstrum)
-        cepstrum,invD,mu,sigma= pp.main(songs[i],fs,hpFreq=250,nfft=nfft,hopfactor=hopF,M=False,numCoeffs= numCoeffs) 
-        cur_labels= np.asarray(labels[filename[:-4]])
-        
-        #getting batches, indexing only with len(labels)
-        indexing = [np.asarray(range(batchsize))+x for x in np.arange(0,cur_labels.shape[0]-batchsize,batchsize)] # indexing either shifting by batchsize or change to 1
-        cepstrum= cepstrum[indexing,:].reshape((-1,numCoeffs*batchsize)) # stretch batches to 1D array
-        cur_labels = np.median(cur_labels[indexing,],axis=1)
-        if i ==0:
-            data=cepstrum
-            targets=cur_labels
-        else:
-            data=np.vstack((data,cepstrum))
-            targets=np.hstack((targets,cur_labels))
-    targets=targets.T
-    
-    logit = linear_model.LogisticRegression()
-    if crossValidation:
-        print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
-
-        print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-        scores = cross_validation.cross_val_score(logit, data, targets, cv=crossValidation)
-        print scores
-        print 'mean score: %.3f' %np.mean(scores)
-        
-    #===========================================================================
-    # seqlen = [len(x) for x in songs]
-    # print seqlen
-    #===========================================================================
-
-    print filenames
-    if batchsize == 1:
-        pl.figure()
-        pl.imshow(np.dot(rg.unnormalize(data,mu,sigma),invD.T).T, aspect="auto", origin="lower")
-        pl.plot(targets*invD.shape[0]/10)
-        pl.show()
-
-def TARBM_logit(path,crossValidation=5):
-    inputfile= '//home/timom/git/DeepBeliefBird/deep/trained_models/1_38_concat.pkl'
-    pklfile=open(inputfile,'rb')
-    dbn_tadbn=cPickle.load(pklfile)
-    nfft=512
-    hopF=2
-    numCoeffs=30
-    songs,fs,filenames,seqlen=bsu.readSongs(path)        
-    labels= bsu.createLabelArray(path,PEGGY_DRIFT,fs=fs,windowL=nfft,hopF=hopF)      
-    preCepstrum=np.zeros((dbn_tadbn.delay,numCoeffs))
-    for i,filename in enumerate(filenames):
-        
-        cepstrum,invD,mu,sigma= pp.main(songs[i],fs,hpFreq=250,nfft=nfft,hopfactor=hopF,M=False,numCoeffs= numCoeffs)
-        cepstrum=np.asarray(np.vstack((preCepstrum,cepstrum)), dtype=theano.config.floatX)
-        #DO TARBM propup
-        tarbm_thoughts= dbn_tadbn.propup(cepstrum)[0,:,:] #1st Dim: output of hidden before (0) and after (1) sigmoid activation
-        cur_labels= np.array(labels[filename[:-4]])
-        if i ==0:
-            data=tarbm_thoughts[:np.size(cur_labels)]
-            targets=cur_labels
-        else:
-            data=np.vstack((data,tarbm_thoughts[:np.size(cur_labels)]))
-            targets=np.hstack((targets,cur_labels))
-        
-    targets=targets.T
-    
-    #n-fold cross validation
-    if crossValidation:
-        print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
-        print targets.shape
-        print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-        logit = linear_model.LogisticRegression()
-        scores = cross_validation.cross_val_score(logit, data, targets, cv=crossValidation)
-        print scores
-        print 'mean score: %.3f' %np.mean(scores)
-    
 def doLogit(data,targets):
     logit = linear_model.LogisticRegression()
     
     num_samples = data.shape[0]
-    num_training=num_samples-250#int(num_samples/1.5)
+    num_training=num_samples-200#int(num_samples/1.5)
     training=data[0:num_training,:]
     trainTargets=targets[0:num_training]
     
@@ -176,7 +94,7 @@ def doLogit(data,targets):
     
     print 'training correct = %.3f' %(np.sum(prediction[:num_training] == targets[:num_training])/(num_training*1.0))
     pl.figure()
-    for i in range(num_training-200,len(targets)):
+    for i in range(num_training-20,len(targets)):
         if i == num_training:
             pl.plot([i,i],[-1,np.max(targets)+1],label='unseen ->')
         
@@ -197,27 +115,28 @@ def loopThroughTADBN(TADBNpath):
     files = [ f for f in os.listdir(TADBNpath) if os.path.isfile(os.path.join(TADBNpath,f)) and f.endswith('.pkl')]
     allscores = {}
     for i,TADBNfile in enumerate(files):
-        #get parameters from filename
+        #get parameters from filename 1024_10_10_0.0_FB_1189.pkl
+        print TADBNfile
         temp=TADBNfile.split('_',5)
         nfft=int(temp[0])
         delay=int(temp[1])
         hidden_size=int(temp[2])
         sparsity=float(temp[3])
-        birdnum=int(temp[4].split('.',1)[0])
+        birdnum=int(temp[5].split('.',1)[0])
         songpath= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/' + str(birdnum) + '/'
         
         #create DAta
-        data,targets = createData(songpath,nfft=nfft,batchsize=batchsize,method='tadbn',tadbn_file=TADBNfile)
+        data,targets = createData(songpath,nfft=nfft,batchsize=batchsize,method='tadbn',tadbn_file=TADBNfile,filterbank=True)
         logit = linear_model.LogisticRegression(penalty='l1', C=1)
         kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
         scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
-        print i
-        print scores
+        
+        #print scores
         print 'mean score: %.3f' %np.mean(scores)
         allscores[TADBNfile[0:-4]] = [scores, np.mean(scores)]
     
     allscores=sorted(allscores.items(), key=lambda t: t[1][1])
-    output = open('allscores_batch3.pkl', 'wb')
+    output = open('allscores_FB_normal_batch3_aftersigmoid.pkl', 'wb')
     cPickle.dump(allscores, output)
     output.close()
     print allscores
@@ -227,50 +146,57 @@ def loopThroughTADBN(TADBNpath):
     
 if __name__ == '__main__':
     TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models'
-    #loopThroughTADBN(TADBNpath)
+    loopThroughTADBN(TADBNpath)
     
-    
-    pkl = open('allscores_batch1.pkl', 'rb')
-    allscores= cPickle.load(pkl)
-    pkl.close()
-    print sorted(allscores.items(), key=lambda t: t[1][1])
-    path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
-    #TARBM_logit(path,crossValidation=5)
-    #normal_logit(path,batchsize=3,crossValidation=5)
-    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_200_0.0_FB_1189.pkl'
-    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=3)
-    
-    print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
-    print targets.shape
-    print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-    logit = linear_model.LogisticRegression(penalty='l1', C=1)
-    #lg = linear_model.LogisticRegression(penalty='l1', C=0.01)    
-    #lg.fit(data, targets)
-    #print lg.coef_.shape
-    #pl.hist(lg.coef_)
-    #pl.show()
-    
-    kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
     
     #===========================================================================
-    # pred = np.zeros_like(targets)
-    # coefs = []
-    # for train, test in kf:
-    #    clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
-    #    clf.fit(data[train], targets[train])
-    #    coefs.append(clf.coef_)
-    #    pred[test] = clf.predict(data[test])
-    # coefs = np.array(coefs)
-    # print coefs.shape
+    # pkl = open('allscores_FB_batch3.pkl', 'rb')
+    # allscores2= cPickle.load(pkl)
+    # pkl.close()
+    # print allscores2
+    # 
     #===========================================================================
-       
-       
     
     
-    scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
-    print scores
-    print 'mean score: %.3f' %np.mean(scores)
-    doLogit(data,targets)
+    #===========================================================================
+    # path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
+    # #TARBM_logit(path,crossValidation=5)
+    # #normal_logit(path,batchsize=3,crossValidation=5)
+    # tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_300_0.0_FB_1189.pkl'
+    # data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=3,filterbank=True)
+    # 
+    # print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
+    # print targets.shape
+    # print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
+    # logit = linear_model.LogisticRegression(penalty='l1', C=1)
+    # #lg = linear_model.LogisticRegression(penalty='l1', C=0.01)    
+    # #lg.fit(data, targets)
+    # #print lg.coef_.shape
+    # #pl.hist(lg.coef_)
+    # #pl.show()
+    # 
+    # kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
+    # 
+    # #===========================================================================
+    # # pred = np.zeros_like(targets)
+    # # coefs = []
+    # # for train, test in kf:
+    # #    clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
+    # #    clf.fit(data[train], targets[train])
+    # #    coefs.append(clf.coef_)
+    # #    pred[test] = clf.predict(data[test])
+    # # coefs = np.array(coefs)
+    # # print coefs.shape
+    # #===========================================================================
+    #  
+    #  
+    # 
+    # 
+    # scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
+    # print scores
+    # print 'mean score: %.3f' %np.mean(scores)
+    # doLogit(data,targets)
+    #===========================================================================
     
     
     #===========================================================================
