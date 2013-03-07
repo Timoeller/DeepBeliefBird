@@ -131,24 +131,28 @@ if __name__ == '__main__':
         if files.endswith(".xls"):
             xlsfile=files 
             
-    nfft=512
+    nfft=1024
     songs,fs,filenames=readSongs(path)        
     labels= createLabelArray(path,PEGGY_DRIFT=0.01,fs=fs,windowL=nfft,hopF=2)  
     print filenames      
     print len(songs)
-    songnumber = 4
+    songnumber = 0
     print filenames[songnumber][:-4]
     newspec,invD,mu,sigma= pp.main(songs[songnumber],fs,hpFreq=250,nfft=nfft,hopfactor=2,filterbank=False,numCoeffs= 30,plotting=False)
     print newspec.shape
     
     if plotting:
         oldspec = np.dot(invD,((newspec*sigma)+mu).T)
+        print oldspec.shape
         pl.figure()
+        pl.subplot(211)
         pl.imshow(oldspec,origin='lower',aspect='auto')
         label=labels[filenames[songnumber][:-4]]
         pl.plot(label*oldspec.shape[0]/20.0,'xb')
         pl.xlim(0,oldspec.shape[1])
         
+        pl.subplot(212)
+        pl.imshow(newspec.T,origin='lower',aspect='auto')
         pl.show()
 
             

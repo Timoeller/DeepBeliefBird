@@ -1,7 +1,7 @@
 '''
 Module to pre-process wav files 
 - highpass (simple noise reduction)
-- spectogram
+- spectrogram
 - filterbank (not used in main() )
 - data compression with DCT
 
@@ -41,7 +41,7 @@ def dctmtx(n):
     D[0] /= np.sqrt(2)
     return D
 
-def compute_spectogram(s,window,nfft,fs,hopfactor=2):
+def compute_spectrogram(s,window,nfft,fs,hopfactor=2):
     '''
     split signal into frames and compute fft
     len(window) <= nfft
@@ -103,7 +103,7 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30
     '''
     function that performs preprocessing on audiodata (.wav) in song by
     1. highpass filtering with butterworth filter (noise reduction)
-    2. compute spectogram:  - window (hamming) of size nfft
+    2. compute spectrogram:  - window (hamming) of size nfft
                             - fft of size nfft
                             - take only square of positive Frequencies (power spectrum)
                             - take log
@@ -118,11 +118,11 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30
     '''
     #highpass
     filteredsong=highpass(song,hpFreq,fs)
-    #spectogram
+    #spectrogram
     window=hamming(nfft)
-    spectogram= compute_spectogram(filteredsong,window,nfft,fs,hopfactor=hopfactor)
-    spectogram[spectogram < 1e-100]=1e-100 #log 0 avoid
-    spectogram=np.log(spectogram)
+    spectrogram= compute_spectrogram(filteredsong,window,nfft,fs,hopfactor=hopfactor)
+    spectrogram[spectrogram < 1e-100]=1e-100 #log 0 avoid
+    spectrogram=np.log(spectrogram)
     #filterbank
     if filterbank:
         # we want to filter frequencies for zebra finch from 250Hz to 11kHz
@@ -137,13 +137,13 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30
         triF=filters[0][:,:nfft/2+1].T
         triF=triF/np.sum(triF[:,0])
         
-        spectogram=np.dot(spectogram,triF)
+        spectrogram=np.dot(spectrogram,triF)
         
     #DCT
     if DCT:
-        D = dctmtx(spectogram.shape[1])[0:numCoeffs,:]
-        invD = np.linalg.inv(dctmtx(spectogram.shape[1]))[:,0:numCoeffs]
-        newspec = np.dot(D,spectogram.T).T
+        D = dctmtx(spectrogram.shape[1])[0:numCoeffs,:]
+        invD = np.linalg.inv(dctmtx(spectrogram.shape[1]))[:,0:numCoeffs]
+        newspec = np.dot(D,spectrogram.T).T
     
     #normalization of each channel through time
     mu = np.mean(newspec,axis=0)
@@ -157,8 +157,8 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30
     if plotting:
         PINVtriF=np.linalg.pinv(triF)
         #INVtrifilt[np.isnan(INVtrifilt)]=0
-        #trispec= np.dot(spectogram,triF)
-        oldtrispec= np.dot(spectogram,PINVtriF)
+        #trispec= np.dot(spectrogram,triF)
+        oldtrispec= np.dot(spectrogram,PINVtriF)
         oldspec = np.dot(invD,((newspec*sigma)+mu).T).T
     
         pl.figure()
@@ -170,8 +170,8 @@ def main(song,fs,hpFreq=250,nfft=1024,hopfactor=2,filterbank=False,numCoeffs= 30
         pl.yticks([])
         
         pl.subplot(4,1,2)
-        pl.imshow((spectogram).T,origin='lower',aspect='auto')
-        pl.title('filtered Spectogram',fontsize=30)
+        pl.imshow((spectrogram).T,origin='lower',aspect='auto')
+        pl.title('filtered spectrogram',fontsize=30)
         pl.ylabel('nfft bin')
         pl.xticks([])
         

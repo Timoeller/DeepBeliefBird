@@ -22,7 +22,7 @@ import os
 
 PEGGY_DRIFT=0.01 # in s
 
-def createData(path,nfft=256,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,method='normal',tadbn_file=None,filterbank=True):
+def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,method='normal',tadbn_file=None,filterbank=True):
     '''
     method to read wav files and labels from path to generate data for classification
     in: 
@@ -109,7 +109,21 @@ def doLogit(data,targets):
     pl.ylabel('class number')
     pl.title('Logistic Regression')
     pl.show()
-        
+   
+def doSparseLogit(data,targets):
+    lg = linear_model.LogisticRegression(penalty='l1', C=1)    
+    lg.fit(data, targets)
+    print lg.coef_.shape
+    
+    #look at coeffs and 
+    out = open('logitcoeffs_1189_C=1.pkl','wb')
+    cPickle.dump(lg.coef_,out)
+    out.close()
+
+    pl.imshow(lg.coef_)
+    pl.colorbar()
+    pl.show()
+         
 def loopThroughTADBN(TADBNpath):
     batchsize=3
     files = [ f for f in os.listdir(TADBNpath) if os.path.isfile(os.path.join(TADBNpath,f)) and f.endswith('.pkl')]
@@ -140,72 +154,21 @@ def loopThroughTADBN(TADBNpath):
     cPickle.dump(allscores, output)
     output.close()
     print allscores
-
-    
-    
-    
+ 
 if __name__ == '__main__':
-    TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models'
-    loopThroughTADBN(TADBNpath)
+    path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
+    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_300_0.05_FB_1189.pkl'
+    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=1,filterbank=True)
+    
+    #TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models'
+    #loopThroughTADBN(TADBNpath)  
+    #doSparseLogit(data,targets)
+    
+    logit = linear_model.LogisticRegression(penalty='l1', C=1)
+    kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True) #no shuffling! of data, cause one timepoint contains info of previous data
+    scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
+    print scores
+    print 'mean score: %.3f' %np.mean(scores)
     
     
-    #===========================================================================
-    # pkl = open('allscores_FB_batch3.pkl', 'rb')
-    # allscores2= cPickle.load(pkl)
-    # pkl.close()
-    # print allscores2
-    # 
-    #===========================================================================
-    
-    
-    #===========================================================================
-    # path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
-    # #TARBM_logit(path,crossValidation=5)
-    # #normal_logit(path,batchsize=3,crossValidation=5)
-    # tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_300_0.0_FB_1189.pkl'
-    # data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=3,filterbank=True)
-    # 
-    # print 'num examples: %i || input dimensions:%i'%(data.shape[0],data.shape[1])
-    # print targets.shape
-    # print 'number of different targets: %i ' %(np.max(targets)+1) #0 is target as well
-    # logit = linear_model.LogisticRegression(penalty='l1', C=1)
-    # #lg = linear_model.LogisticRegression(penalty='l1', C=0.01)    
-    # #lg.fit(data, targets)
-    # #print lg.coef_.shape
-    # #pl.hist(lg.coef_)
-    # #pl.show()
-    # 
-    # kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True)
-    # 
-    # #===========================================================================
-    # # pred = np.zeros_like(targets)
-    # # coefs = []
-    # # for train, test in kf:
-    # #    clf = linear_model.LogisticRegression(penalty='l1', C=0.01)    
-    # #    clf.fit(data[train], targets[train])
-    # #    coefs.append(clf.coef_)
-    # #    pred[test] = clf.predict(data[test])
-    # # coefs = np.array(coefs)
-    # # print coefs.shape
-    # #===========================================================================
-    #  
-    #  
-    # 
-    # 
-    # scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
-    # print scores
-    # print 'mean score: %.3f' %np.mean(scores)
-    # doLogit(data,targets)
-    #===========================================================================
-    
-    
-    #===========================================================================
-    # pl.figure()
-    # pl.imshow(data.T,origin='lower')
-    # pl.show()
-    # print data.shape
-    # print targets.shape
-    # output = open('/home/timom/git/DeepBeliefBird/deep/input/1189_concat.pkl', 'wb')
-    # cPickle.dump(data, output)
-    # output.close()
-    #===========================================================================
+

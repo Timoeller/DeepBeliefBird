@@ -1,29 +1,27 @@
 import pylab as pl
 from scipy.io import wavfile
-
 import sys
-sys.path.insert(0, '//home/timom/git/deep')
-from models.tadbn import TADBN
-
 import numpy as np
 import theano
 import cPickle
 
-import reconstruct_generated as recon
+sys.path.insert(0, '//home/timom/git/deep')
+from models.tadbn import TADBN
 
 sys.path.insert(0, '//home/timom/git/DeepBeliefBird/')
 sys.path.append('..')
 import SongFeatures.preprocessing as pp
 import SongFeatures.birdsongUtil as bsu
+import reconstruct_generated as recon
 
 ''' 
-paramter specs
+parameter specs
 '''
 inputpath= '../SongFeatures/Motifs/1189/'
-nfft_list=[512]
-delay_list = [25]
-hidden_layers_sizes_list =[[500]]
-sparse_list=[0.01,0.001]
+nfft_list=[1024]
+delay_list = [1]
+hidden_layers_sizes_list =[[300]]
+sparse_list=[0.05]
 
 
 for nfft in nfft_list:
