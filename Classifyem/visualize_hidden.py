@@ -44,7 +44,7 @@ def calcSimilarityMatrix(coef,n=5,plotting=True):
     return SM
      
     
-def visual_frames(data,targets,showCoef=False):
+def visual_frames(data,targets,C=1,showCoef=False):
     '''
     visualizes for each individual frame some interesting hidden neurons
     interesting: large regression coefficients (absolute terms)
@@ -60,7 +60,7 @@ def visual_frames(data,targets,showCoef=False):
     inv_converter=dict([(v,k) for (k,v) in converter.items()])\
     
     
-    lg = linear_model.LogisticRegression(penalty='l1', C=1)    
+    lg = linear_model.LogisticRegression(penalty='l1', C=C)    
     lg.fit(data, targets)
     numClasses=int(np.max(targets)+1) #+1 for 0 class
     
@@ -74,10 +74,10 @@ def visual_frames(data,targets,showCoef=False):
         
         
         
-        lg = linear_model.LogisticRegression(penalty='l1', C=1)    
-        lg.fit(data, targets)
+        lg2 = linear_model.LogisticRegression(penalty='l1', C=1)    
+        lg2.fit(data, targets)
         pl.subplot(212)
-        pl.imshow(lg.coef_,interpolation='nearest')
+        pl.imshow(lg2.coef_,interpolation='nearest')
         pl.colorbar()
         
         pl.show()
@@ -85,7 +85,7 @@ def visual_frames(data,targets,showCoef=False):
 
     
     
-    numInteresting= 2
+    numInteresting= 1
     int_hidden=np.argsort(lg.coef_,axis=1)
     hidden_ex= np.zeros((numInteresting,numClasses))
     hidden_inh= np.zeros((numInteresting,numClasses))
@@ -142,6 +142,6 @@ if __name__ == '__main__':
     temp=cPickle.load(pkl)
     data=temp[0]
     targets=temp[1]
-    visual_frames(data,targets)
+    visual_frames(data,targets,C=0.05,showCoef=True)
     #visualize_frames(songpath)
     #visualize(songpath)

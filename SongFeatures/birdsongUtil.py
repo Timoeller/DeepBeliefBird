@@ -107,8 +107,8 @@ def readSongs(mypath):
         try:
             [fs, song]=wavfile.read(mypath+myfile)
         except Exception, e:
-            print e + myfile
-            #print myfile + ' is not working properly'
+            print e
+            print myfile + ' is not working properly'
             this=False
         if not(fsAssigned) and this: #tricky if first file is corrupted
             FSall = fs
@@ -124,7 +124,7 @@ def readSongs(mypath):
     return songs,FSall,filenames    
 
 if __name__ == '__main__':
-    path= '//home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
+    path= '//home/timom/git/DeepBeliefBird/SongFeatures/Motifs/3718/'
     plotting=True
     os.chdir(path)
     for files in os.listdir("."):

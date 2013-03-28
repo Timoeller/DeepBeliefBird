@@ -17,10 +17,11 @@ import reconstruct_generated as recon
 ''' 
 parameter specs
 '''
-inputpath= '../SongFeatures/Motifs/1189/'
+inputpath= '../SongFeatures/Motifs/3718/'
 nfft_list=[1024]
-delay_list = [1]
-hidden_layers_sizes_list =[[300]]
+delay_list = [3] # delay = 0: change # epochs for ae and all to 0!!! && propup( static=True)
+hidden_layers_sizes_list =[[300]] #[[x] for x in np.arange(10,100,2)]
+print hidden_layers_sizes_list
 sparse_list=[0.05]
 
 
@@ -29,7 +30,7 @@ for nfft in nfft_list:
         for hidden_layers_sizes in hidden_layers_sizes_list:
             for sparse in sparse_list:
                 
-                savedname= '%i_%i_%i_%.3f_FB_1189' %(nfft,delay,hidden_layers_sizes[0],sparse) 
+                savedname= '%i_%i_%i_%.2f_FB_3718' %(nfft,delay,hidden_layers_sizes[0],sparse) 
                 print savedname
                 songs,fs,filenames=bsu.readSongs(inputpath)  
                 
@@ -62,7 +63,7 @@ for nfft in nfft_list:
                                   save_interval=10, ae_epochs=80, all_epochs=50,
                                   batch_size=5,seqlen=seqlen)
                 
-                output = open('trained_models/' + savedname + '.pkl', 'wb')
+                output = open('trained_models/useful/' + savedname + '.pkl', 'wb')
                 cPickle.dump(dbn_tadbn, output)
                 output.close()
                 #===============================================================================

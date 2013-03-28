@@ -22,7 +22,7 @@ import os
 
 PEGGY_DRIFT=0.01 # in s
 
-def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,method='normal',tadbn_file=None,filterbank=True):
+def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,method='normal',tadbn_file=None,filterbank=True,static=False,floatx='float64'):
     '''
     method to read wav files and labels from path to generate data for classification
     in: 
@@ -48,14 +48,14 @@ def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,metho
             if not(tadbn_file):
                 tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/old/512_25_1189.pkl'
             if len(tadbn_file) < 35:
-                tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/' + tadbn_file
+                tadbn_file='/home/timom/git/DeepBeliefBird/deep/trained_models/hidden_comp/delay5/' + tadbn_file
             pklfile=open(tadbn_file,'rb')
             dbn_tadbn=cPickle.load(pklfile)
             #create zero array of size delay to put in front of data and cast into theano array 
             preCepstrum=np.zeros((dbn_tadbn.delay,numCoeffs))
-            theano.config.floatX='float32'
+            theano.config.floatX=floatx
             cepstrum=np.asarray(np.vstack((preCepstrum,cepstrum)), dtype=theano.config.floatX)
-            cepstrum= dbn_tadbn.propup(cepstrum)[1,:,:]#1st Dim: output of hidden before (0) and after (1) sigmoid activation
+            cepstrum= dbn_tadbn.propup(cepstrum,static=static)[1,:,:]#1st Dim: output of hidden before (0) and after (1) sigmoid activation
             
             
         #getting batches, indexing only from 0 to len(labels) 
@@ -66,7 +66,8 @@ def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,metho
             cepstrum= cepstrum[indexing,:].reshape((-1,cepstrum.shape[1]*batchsize)) # cepstrum is in hidden space of dbn != numcoeffs
         else:
             cepstrum= cepstrum[indexing,:].reshape((-1,numCoeffs*batchsize)) # stretch batches to 1D array
-        cur_labels = np.median(cur_labels[indexing,],axis=1)
+        #cur_labels = np.round(np.median(cur_labels[indexing],axis=1))
+        cur_labels = cur_labels[indexing][:,-1]
             
         if i ==0:
             data=cepstrum
@@ -79,10 +80,10 @@ def createData(path,nfft=1024,hopF=2,numCoeffs=12,batchsize=1,batchshift=1,metho
     return data,targets
     
 def doLogit(data,targets):
-    logit = linear_model.LogisticRegression()
+    logit = linear_model.LogisticRegression(penalty='l1', C=1)
     
     num_samples = data.shape[0]
-    num_training=num_samples-200#int(num_samples/1.5)
+    num_training=num_samples-120#int(num_samples/1.5)
     training=data[0:num_training,:]
     trainTargets=targets[0:num_training]
     
@@ -94,7 +95,7 @@ def doLogit(data,targets):
     
     print 'training correct = %.3f' %(np.sum(prediction[:num_training] == targets[:num_training])/(num_training*1.0))
     pl.figure()
-    for i in range(num_training-20,len(targets)):
+    for i in range(num_training,len(targets)):
         if i == num_training:
             pl.plot([i,i],[-1,np.max(targets)+1],label='unseen ->')
         
@@ -110,22 +111,9 @@ def doLogit(data,targets):
     pl.title('Logistic Regression')
     pl.show()
    
-def doSparseLogit(data,targets):
-    lg = linear_model.LogisticRegression(penalty='l1', C=1)    
-    lg.fit(data, targets)
-    print lg.coef_.shape
-    
-    #look at coeffs and 
-    out = open('logitcoeffs_1189_C=1.pkl','wb')
-    cPickle.dump(lg.coef_,out)
-    out.close()
-
-    pl.imshow(lg.coef_)
-    pl.colorbar()
-    pl.show()
          
 def loopThroughTADBN(TADBNpath):
-    batchsize=3
+    batchsize=1
     files = [ f for f in os.listdir(TADBNpath) if os.path.isfile(os.path.join(TADBNpath,f)) and f.endswith('.pkl')]
     allscores = {}
     for i,TADBNfile in enumerate(files):
@@ -150,25 +138,33 @@ def loopThroughTADBN(TADBNpath):
         allscores[TADBNfile[0:-4]] = [scores, np.mean(scores)]
     
     allscores=sorted(allscores.items(), key=lambda t: t[1][1])
-    output = open('allscores_FB_normal_batch3_aftersigmoid.pkl', 'wb')
+    output = open('allscores_FB_hiddensize_d5.pkl', 'wb')
     cPickle.dump(allscores, output)
     output.close()
     print allscores
  
 if __name__ == '__main__':
-    path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/1189/'
-    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/1024_25_300_0.05_FB_1189.pkl'
-    data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=1,filterbank=True)
     
-    #TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models'
+    #TADBNpath= '/home/timom/git/DeepBeliefBird/deep/trained_models/hidden_comp/delay5'
     #loopThroughTADBN(TADBNpath)  
-    #doSparseLogit(data,targets)
+    #doLogit(data,targets)
     
+    delay = 0
+    path= '/home/timom/git/DeepBeliefBird/SongFeatures/Motifs/3718/'
+    tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/useful/1024_3_300_0.05_FB_3718unseen.pkl'
+    #tadbn_file='//home/timom/git/DeepBeliefBird/deep/trained_models/useful/1024_%i_300_0.05_FB_1189.pkl' %(delay)
+    if delay == 0:
+        data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=3,filterbank=True,static=True,floatx='float64')
+    else:
+        data,targets=createData(path,tadbn_file =tadbn_file ,method='tadbn',nfft=1024,hopF=2,batchsize=1,filterbank=True,floatx='float64')
+    
+    #doLogit(data,targets)
     logit = linear_model.LogisticRegression(penalty='l1', C=1)
     kf = cross_validation.KFold(len(targets), k=5, shuffle=False, indices=True) #no shuffling! of data, cause one timepoint contains info of previous data
     scores = cross_validation.cross_val_score(logit, data, targets, cv=kf)
     print scores
     print 'mean score: %.3f' %np.mean(scores)
     
-    
+
+
 
